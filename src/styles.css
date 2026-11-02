@@ -155,13 +155,15 @@ header {
   filter: drop-shadow(0 0 1px #fff);
 }
 
-.shape canvas {
+.shape canvas,
+.shape img {
   position: absolute;
   inset: 6%;
   width: 88%;
   height: 88%;
   z-index: 0;
   pointer-events: none;
+  object-fit: cover;
 }
 
 .shape.circle {
@@ -268,7 +270,8 @@ header {
 
 #overlay,
 #link-overlay,
-#zuma-overlay {
+#zuma-overlay,
+#zuma-maps {
   position: fixed;
   inset: 0;
   display: grid;
@@ -280,8 +283,24 @@ header {
 
 #overlay[hidden],
 #link-overlay[hidden],
-#zuma-overlay[hidden] {
+#zuma-overlay[hidden],
+#zuma-maps[hidden] {
   display: none;
+}
+
+.map-picks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.map-picks .back {
+  background: #fff;
+}
+
+.map-picks .back.is-on {
+  background: #ffd166;
 }
 
 .card {
@@ -397,42 +416,27 @@ header {
 #zuma {
   position: fixed;
   inset: 0;
-  touch-action: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  touch-action: manipulation;
   user-select: none;
 }
 
+#link-view,
 #zuma-view {
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
-  height: 100%;
-  display: block;
-  touch-action: none;
-}
-
-#zuma-hint {
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  bottom: calc(12px + env(safe-area-inset-bottom));
-  margin: 0;
-  text-align: center;
-  color: var(--muted);
-  font-size: 13px;
-  pointer-events: none;
-}
-
-#link-view {
-  width: 100%;
-  height: 100%;
+  height: auto;
   display: block;
   touch-action: none;
 }
 
 .link-hud {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  position: relative;
   z-index: 6;
+  flex: none;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -440,14 +444,8 @@ header {
   padding:
     calc(12px + env(safe-area-inset-top))
     calc(12px + env(safe-area-inset-right))
-    0
+    8px
     calc(12px + env(safe-area-inset-left));
-  pointer-events: none;
-}
-
-.link-hud .back,
-.link-hud span {
-  pointer-events: auto;
 }
 
 .link-hud span {
@@ -458,16 +456,21 @@ header {
   box-shadow: 0 4px 0 rgba(80, 130, 170, 0.14);
 }
 
-#link-tray {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: calc(40px + env(safe-area-inset-bottom));
-  z-index: 6;
+#link-dock {
+  flex: none;
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px 0;
+}
+
+#link-tray {
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 6px;
-  pointer-events: none;
 }
 
 .tray-slot {
@@ -479,20 +482,41 @@ header {
   overflow: hidden;
 }
 
+button.tray-slot {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+button.tray-slot:disabled {
+  opacity: 0.55;
+}
+
+#link-held.is-held {
+  box-shadow: inset 0 0 0 3px #ffd166;
+  color: transparent;
+}
+
+#link-confirm:disabled {
+  opacity: 0.45;
+}
+
 .tray-slot canvas {
   width: 100%;
   height: 100%;
   display: block;
 }
 
-#link-hint {
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  bottom: calc(12px + env(safe-area-inset-bottom));
+#link-hint,
+#zuma-hint {
+  flex: none;
   margin: 0;
+  padding: 8px 16px calc(12px + env(safe-area-inset-bottom));
   text-align: center;
   color: var(--muted);
   font-size: 13px;
-  pointer-events: none;
 }

@@ -18,7 +18,18 @@ import {
 
 const HINT = "瞄准轨道上的球，三个同色就能消。";
 const SHOT_SPEED = 740;
-const MAPS: ZumaMap[] = ["spiral", "snake", "loop"];
+const MAPS: ZumaMap[] = [
+  "spiral",
+  "snake",
+  "loop",
+  "castle",
+  "subway",
+  "river",
+  "maze",
+  "mountain",
+  "garden",
+  "interchange",
+];
 
 let back: () => void = () => {};
 let view: ZumaView | null = null;
@@ -35,6 +46,7 @@ let shot: Shot | null = null;
 let flight: Flight | null = null;
 let seat: Seat | null = null;
 let ended = false;
+let awaitingMap = false;
 let seq = 1;
 let shownCount = -1;
 const rng = mulberry32(Date.now() >>> 0);
@@ -73,10 +85,26 @@ function showOverlay(title: string, text: string, action: string): void {
   must<HTMLElement>("#zuma-overlay").hidden = false;
 }
 
+function enter(index: number): void {
+  if (!view) return;
+  levelIndex = index;
+  awaitingMap = true;
+  ended = false;
+  shot = null;
+  seat = null;
+  flight?.clear();
+  must<HTMLElement>("#zuma-overlay").hidden = true;
+  must<HTMLElement>("#zuma-maps").hidden = false;
+  must<HTMLElement>("#zuma-level").textContent = `第 ${index + 1} 关`;
+  renderMaps();
+  ensureLoop();
+}
+
 function begin(index: number): void {
   const level = LEVELS[index];
   if (!level || !view) return;
   levelIndex = index;
+  awaitingMap = false;
   segments = createLevel(level, rng);
   seq = level.count + 1;
   held = drawColor(segments, rng);
@@ -87,9 +115,9 @@ function begin(index: number): void {
   ended = false;
   shownCount = -1;
   must<HTMLElement>("#zuma-overlay").hidden = true;
+  must<HTMLElement>("#zuma-maps").hidden = true;
   must<HTMLElement>("#zuma-hint").textContent = HINT;
   renderHud();
-  renderMaps();
   ensureLoop();
 }
 
@@ -100,6 +128,7 @@ function renderMaps(): void {
 }
 
 function chooseMap(next: ZumaMap): void {
+  if (!awaitingMap) return;
   map = next;
   view?.setMap(next);
   begin(levelIndex);
@@ -112,7 +141,7 @@ function finish(title: string, text: string, action: string, cue: "win" | "lose"
 }
 
 function launch(): void {
-  if (!view || !flight || ended || shot || seat) return;
+  if (!view || !flight || awaitingMap || ended || shot || seat) return;
   const angle = view.aim();
   const origin = view.shooter();
   const radius = view.ballRadius();
@@ -239,7 +268,7 @@ function frame(now: number): void {
   const dt = last === 0 ? 1 / 60 : Math.min(0.05, (now - last) / 1000);
   last = now;
   const level = LEVELS[levelIndex];
-  if (level && !ended) {
+  if (level && !ended && !awaitingMap) {
     if (seat) tickSeat(dt);
     else {
       const step = advance(segments, level.speed * dt, pathLength(level));
@@ -278,9 +307,9 @@ function wire(): void {
   }
   must<HTMLButtonElement>("#zuma-overlay-action").addEventListener("click", () => {
     const action = must<HTMLButtonElement>("#zuma-overlay-action").textContent;
-    if (action === "下一关") begin(levelIndex + 1);
-    else if (action === "再来一局") begin(0);
-    else begin(levelIndex);
+    if (action === "下一关") enter(levelIndex + 1);
+    else if (action === "再来一局") enter(0);
+    else enter(levelIndex);
   });
 }
 
@@ -292,7 +321,7 @@ export function startZuma(onBack: () => void): void {
     view.listen(launch);
     flight = createFlight();
   }
-  begin(levelIndex);
+  enter(levelIndex);
 }
 
 export function stopZuma(): void {

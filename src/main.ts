@@ -1,4 +1,4 @@
-import { isMuted, play, setMuted, unlock } from "./audio/bus.ts";
+import { isMuted, play, setMuted, setTheme, unlock } from "./audio/bus.ts";
 import { startLink, stopLink } from "./link/play.ts";
 import { startMatch3 } from "./match3/session.ts";
 import { startZuma, stopZuma } from "./zuma/play.ts";
@@ -34,6 +34,7 @@ function showMenu(): void {
   link.hidden = true;
   zuma.hidden = true;
   menu.hidden = false;
+  setTheme("menu");
 }
 
 for (const id of ["#pick-match3", "#pick-link", "#pick-zuma"]) {
@@ -47,6 +48,7 @@ must<HTMLButtonElement>("#pick-match3").addEventListener("click", () => {
   link.hidden = true;
   zuma.hidden = true;
   app.hidden = false;
+  setTheme("match3");
   startMatch3(showMenu);
 });
 
@@ -56,6 +58,7 @@ must<HTMLButtonElement>("#pick-link").addEventListener("click", () => {
   app.hidden = true;
   zuma.hidden = true;
   link.hidden = false;
+  setTheme("link");
   startLink(showMenu);
 });
 
@@ -65,5 +68,6 @@ must<HTMLButtonElement>("#pick-zuma").addEventListener("click", () => {
   app.hidden = true;
   link.hidden = true;
   zuma.hidden = false;
+  setTheme("zuma");
   startZuma(showMenu);
 });

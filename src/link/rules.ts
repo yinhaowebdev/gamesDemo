@@ -58,33 +58,75 @@ export const CUBE = 0.9;
 export const GAP = 1;
 
 const TABLE_PAD = 0.45;
-const LEAN = (35 * Math.PI) / 180;
-const VERTICAL = CUBE + 0.35;
+const STACK_COLS = 5;
+const STACK_ROWS = 4;
+const STACK_GAP = 0.95;
+
+export const KIND_COUNT = 12;
+
+const PROP_SPAN: { minY: number; maxY: number }[] = [
+  { minY: -0.26, maxY: 0.46 },
+  { minY: -0.1, maxY: 0.1 },
+  { minY: -0.22, maxY: 0.07 },
+  { minY: -0.22, maxY: 0.24 },
+  { minY: -0.25, maxY: 0.29 },
+  { minY: -0.28, maxY: 0.36 },
+  { minY: -0.2, maxY: 0.2 },
+  { minY: -0.08, maxY: 0.1 },
+  { minY: -0.08, maxY: 0.08 },
+  { minY: -0.31, maxY: 0.51 },
+  { minY: -0.07, maxY: 0.07 },
+  { minY: -0.17, maxY: 0.17 },
+];
+
+export function propSpan(kind: number): { minY: number; maxY: number } {
+  return PROP_SPAN[((kind % KIND_COUNT) + KIND_COUNT) % KIND_COUNT] ?? { minY: -0.2, maxY: 0.2 };
+}
 
 export const LEVELS: LevelDef[] = [
-  { width: 6, depth: 6, layers: [{ width: 6, depth: 6 }, { width: 5, depth: 3 }, { width: 3, depth: 3 }], seconds: 150 },
-  { width: 8, depth: 6, layers: [{ width: 8, depth: 6 }, { width: 6, depth: 5 }, { width: 4, depth: 3 }], seconds: 210 },
   {
-    width: 8,
+    width: 12,
     depth: 8,
     layers: [
-      { width: 8, depth: 8 },
-      { width: 6, depth: 6 },
-      { width: 5, depth: 4 },
-      { width: 3, depth: 2 },
+      { width: 12, depth: 8 },
+      { width: 10, depth: 6 },
+      { width: 10, depth: 3 },
+      { width: 6, depth: 3 },
     ],
-    seconds: 270,
+    seconds: 510,
   },
   {
-    width: 10,
-    depth: 8,
+    width: 12,
+    depth: 10,
     layers: [
-      { width: 10, depth: 8 },
-      { width: 7, depth: 6 },
-      { width: 5, depth: 5 },
-      { width: 3, depth: 3 },
+      { width: 12, depth: 10 },
+      { width: 9, depth: 9 },
+      { width: 8, depth: 6 },
+      { width: 6, depth: 4 },
     ],
-    seconds: 330,
+    seconds: 640,
+  },
+  {
+    width: 16,
+    depth: 12,
+    layers: [
+      { width: 16, depth: 12 },
+      { width: 12, depth: 10 },
+      { width: 10, depth: 6 },
+      { width: 6, depth: 4 },
+    ],
+    seconds: 840,
+  },
+  {
+    width: 16,
+    depth: 14,
+    layers: [
+      { width: 16, depth: 14 },
+      { width: 14, depth: 10 },
+      { width: 10, depth: 8 },
+      { width: 6, depth: 5 },
+    ],
+    seconds: 1000,
   },
 ];
 
@@ -145,39 +187,31 @@ function unit(rng: Rng): number {
   return rng.int(1_000_000) / 1_000_000;
 }
 
-function signed(rng: Rng, limit: number): number {
-  return (unit(rng) * 2 - 1) * limit;
-}
-
 export function scatterPoses(board: Board, rng: Rng): SpawnPose[] {
   const tiles = listTiles(board);
-  const { halfW, halfD } = tableHalf(board.width, board.depth);
-  const inset = CUBE / 2 + 0.04;
-  const xLimit = Math.max(0, halfW - inset);
-  const zLimit = Math.max(0, halfD - inset);
-  const reach = CUBE * (Math.abs(Math.cos(LEAN)) + Math.abs(Math.sin(LEAN))) + 0.08;
-  const cols = Math.max(1, Math.floor((xLimit * 2) / reach));
-  const rows = Math.max(1, Math.floor((zLimit * 2) / reach));
-  const perLayer = cols * rows;
+  const perLayer = STACK_COLS * STACK_ROWS;
   const order = tiles.map((_, index) => index);
   shuffle(order, rng);
+  const columnTop = new Map<string, number>();
   return order.map((slot, index) => {
     const tile = tiles[slot];
     if (!tile) throw new Error("方块出生表越界");
-    const layer = Math.floor(index / perLayer);
     const place = index % perLayer;
-    const col = place % cols;
-    const row = Math.floor(place / cols);
-    const x0 = -xLimit + (col + 0.5) * ((xLimit * 2) / cols);
-    const z0 = -zLimit + (row + 0.5) * ((zLimit * 2) / rows);
+    const col = place % STACK_COLS;
+    const row = Math.floor(place / STACK_COLS);
+    const key = `${col},${row}`;
+    const span = propSpan(tile.tile.kind);
+    const surface = columnTop.get(key) ?? 0;
+    const y = surface - span.minY;
+    columnTop.set(key, y + span.maxY);
     return {
       id: tile.tile.id,
-      x: x0 + signed(rng, 0.03),
-      z: z0 + signed(rng, 0.03),
-      y: CUBE / 2 + 0.55 + layer * VERTICAL,
+      x: (col - (STACK_COLS - 1) / 2) * STACK_GAP,
+      z: (row - (STACK_ROWS - 1) / 2) * STACK_GAP,
+      y,
       yaw: unit(rng) * Math.PI * 2,
-      pitch: signed(rng, LEAN),
-      roll: signed(rng, LEAN),
+      pitch: 0,
+      roll: 0,
     };
   });
 }
@@ -235,12 +269,15 @@ function shuffle<T>(items: T[], rng: Rng): void {
 }
 
 function makeTiles(count: number): Tile[] {
+  const triples = Math.floor(count / 3);
+  const base = Math.floor(triples / KIND_COUNT);
+  let extra = triples % KIND_COUNT;
   const tiles: Tile[] = [];
   let id = 1;
-  let kind = 0;
-  for (let i = 0; i < count; i += 3) {
-    for (let n = 0; n < 3 && i + n < count; n++) tiles.push({ id: id++, kind });
-    kind += 1;
+  for (let kind = 0; kind < KIND_COUNT; kind++) {
+    const groups = base + (extra > 0 ? 1 : 0);
+    if (extra > 0) extra -= 1;
+    for (let n = 0; n < groups * 3; n++) tiles.push({ id: id++, kind });
   }
   return tiles;
 }

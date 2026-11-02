@@ -3,7 +3,17 @@ import { type Segment, placeOf } from "./rules.ts";
 
 export const COLORS = ["#ff5d8f", "#ffd166", "#7bdff2", "#c8f7a0", "#c9a6ff"];
 
-export type ZumaMap = "spiral" | "snake" | "loop";
+export type ZumaMap =
+  | "spiral"
+  | "snake"
+  | "loop"
+  | "castle"
+  | "subway"
+  | "river"
+  | "maze"
+  | "mountain"
+  | "garden"
+  | "interchange";
 
 export interface Shot {
   x: number;
@@ -63,9 +73,8 @@ export function createZumaView(canvas: HTMLCanvasElement): ZumaView {
   }
 
   function rebuild(units: number): void {
-    const parent = canvas.parentElement;
-    const cssW = parent?.clientWidth || canvas.clientWidth || 1;
-    const cssH = parent?.clientHeight || canvas.clientHeight || 1;
+    const cssW = canvas.clientWidth || 1;
+    const cssH = canvas.clientHeight || 1;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = Math.max(1, Math.floor(cssW * dpr));
     canvas.height = Math.max(1, Math.floor(cssH * dpr));
@@ -185,7 +194,7 @@ export function createZumaView(canvas: HTMLCanvasElement): ZumaView {
     canvas.addEventListener("pointercancel", onPointerUp);
     canvas.addEventListener("contextmenu", preventMenu);
     const observer = new ResizeObserver(() => rebuild(pathUnits));
-    observer.observe(canvas.parentElement ?? canvas);
+    observer.observe(canvas);
     resizeObserver = observer;
   }
 
@@ -260,6 +269,13 @@ function measure(points: { x: number; y: number }[]): Sample[] {
 function traceMap(map: ZumaMap, origin: { x: number; y: number }, width: number, height: number): { x: number; y: number }[] {
   if (map === "snake") return snake(width, height);
   if (map === "loop") return loop(origin, width, height);
+  if (map === "castle") return roundedPoly(width, height, CASTLE);
+  if (map === "subway") return roundedPoly(width, height, SUBWAY);
+  if (map === "river") return river(width, height);
+  if (map === "maze") return roundedPoly(width, height, MAZE);
+  if (map === "mountain") return roundedPoly(width, height, MOUNTAIN);
+  if (map === "garden") return garden(width, height);
+  if (map === "interchange") return interchange(width, height);
   return spiral(origin, width, height);
 }
 
@@ -310,6 +326,179 @@ function loop(origin: { x: number; y: number }, width: number, height: number): 
   points.push(...inner.slice(1));
   return points;
 }
+
+const CASTLE: Pt[] = [
+  { x: 0.84, y: 0.74 },
+  { x: 0.16, y: 0.74 },
+  { x: 0.16, y: 0.16 },
+  { x: 0.84, y: 0.16 },
+  { x: 0.84, y: 0.58 },
+  { x: 0.7, y: 0.58 },
+  { x: 0.7, y: 0.36 },
+  { x: 0.3, y: 0.36 },
+  { x: 0.3, y: 0.24 },
+  { x: 0.5, y: 0.24 },
+];
+
+const SUBWAY: Pt[] = [
+  { x: 0.12, y: 0.16 },
+  { x: 0.88, y: 0.16 },
+  { x: 0.88, y: 0.34 },
+  { x: 0.2, y: 0.34 },
+  { x: 0.2, y: 0.66 },
+  { x: 0.8, y: 0.66 },
+  { x: 0.8, y: 0.84 },
+  { x: 0.16, y: 0.84 },
+];
+
+const MAZE: Pt[] = [
+  { x: 0.12, y: 0.12 },
+  { x: 0.88, y: 0.12 },
+  { x: 0.88, y: 0.28 },
+  { x: 0.24, y: 0.28 },
+  { x: 0.24, y: 0.56 },
+  { x: 0.76, y: 0.56 },
+  { x: 0.76, y: 0.74 },
+  { x: 0.16, y: 0.74 },
+  { x: 0.16, y: 0.88 },
+  { x: 0.42, y: 0.88 },
+];
+
+const MOUNTAIN: Pt[] = [
+  { x: 0.86, y: 0.82 },
+  { x: 0.14, y: 0.82 },
+  { x: 0.2, y: 0.68 },
+  { x: 0.8, y: 0.68 },
+  { x: 0.74, y: 0.54 },
+  { x: 0.26, y: 0.54 },
+  { x: 0.32, y: 0.4 },
+  { x: 0.68, y: 0.4 },
+  { x: 0.62, y: 0.26 },
+  { x: 0.38, y: 0.26 },
+  { x: 0.38, y: 0.36 },
+];
+
+function river(width: number, height: number): Pt[] {
+  const points: Pt[] = [];
+  const steps = 160;
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    points.push({
+      x: width * (0.5 + Math.sin(t * Math.PI * 3.5) * 0.32),
+      y: height * (0.1 + t * 0.8),
+    });
+  }
+  return points;
+}
+
+function garden(width: number, height: number): Pt[] {
+  const radius = Math.min(width, height) * 0.1;
+  const beds = [
+    { x: width * 0.24, y: height * 0.22, from: Math.PI * 0.2, to: Math.PI * 1.7 },
+    { x: width * 0.76, y: height * 0.24, from: Math.PI * 1.1, to: Math.PI * 2.6 },
+    { x: width * 0.74, y: height * 0.76, from: -Math.PI * 0.2, to: Math.PI * 1.3 },
+    { x: width * 0.26, y: height * 0.74, from: Math.PI * 0.8, to: Math.PI * 2.2 },
+  ];
+  const points: Pt[] = [];
+  beds.forEach((bed, index) => {
+    const arcPoints = arc(bed.x, bed.y, radius, bed.from, bed.to, 28);
+    const prev = points[points.length - 1];
+    const door = arcPoints[0];
+    if (prev && door) points.push(...line(prev, door, 8));
+    points.push(...arcPoints.slice(index === 0 ? 0 : 1));
+  });
+  return points;
+}
+
+function interchange(width: number, height: number): Pt[] {
+  const points: Pt[] = [];
+  const steps = 36;
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    points.push({
+      x: width * (0.12 + t * 0.76),
+      y: height * (0.2 + Math.sin(t * Math.PI) * 0.08),
+    });
+  }
+  const crest = points[points.length - 1];
+  if (!crest) return points;
+  points.push(...line(crest, { x: width * 0.88, y: height * 0.78 }, 14));
+  const drop = points[points.length - 1];
+  if (!drop) return points;
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    points.push({
+      x: width * (0.88 - t * 0.7),
+      y: height * (0.78 - Math.sin(t * Math.PI) * 0.06),
+    });
+  }
+  const lane = points[points.length - 1];
+  if (!lane) return points;
+  const ramp = { x: width * 0.4, y: height * 0.62 };
+  points.push(...line(lane, ramp, 10));
+  points.push(...line(ramp, { x: width * 0.58, y: height * 0.68 }, 8));
+  return points;
+}
+
+function roundedPoly(width: number, height: number, stops: readonly Pt[]): Pt[] {
+  const pts = stops.map((point) => ({ x: point.x * width, y: point.y * height }));
+  const first = pts[0];
+  const last = pts[pts.length - 1];
+  if (!first || !last) return [];
+  if (pts.length < 3) return pts;
+  const cutLimit = Math.min(width, height) * 0.045;
+  const out: Pt[] = [first];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const prev = pts[i - 1];
+    const curr = pts[i];
+    const next = pts[i + 1];
+    const tail = out[out.length - 1];
+    if (!prev || !curr || !next || !tail) continue;
+    const inLen = Math.hypot(curr.x - prev.x, curr.y - prev.y) || 1;
+    const outLen = Math.hypot(next.x - curr.x, next.y - curr.y) || 1;
+    const cut = Math.min(cutLimit, inLen * 0.45, outLen * 0.45);
+    const arrive = {
+      x: curr.x - ((curr.x - prev.x) / inLen) * cut,
+      y: curr.y - ((curr.y - prev.y) / inLen) * cut,
+    };
+    const leave = {
+      x: curr.x + ((next.x - curr.x) / outLen) * cut,
+      y: curr.y + ((next.y - curr.y) / outLen) * cut,
+    };
+    out.push(...line(tail, arrive, 8));
+    const start = Math.atan2(arrive.y - curr.y, arrive.x - curr.x);
+    let delta = Math.atan2(leave.y - curr.y, leave.x - curr.x) - start;
+    if (delta > Math.PI) delta -= Math.PI * 2;
+    if (delta < -Math.PI) delta += Math.PI * 2;
+    for (let step = 1; step <= 6; step++) {
+      const theta = start + (delta * step) / 6;
+      out.push({ x: curr.x + Math.cos(theta) * cut, y: curr.y + Math.sin(theta) * cut });
+    }
+  }
+  const tail = out[out.length - 1];
+  if (tail) out.push(...line(tail, last, 10));
+  return out;
+}
+
+function line(from: Pt, to: Pt, steps: number): Pt[] {
+  const points: Pt[] = [];
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    points.push({ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t });
+  }
+  return points;
+}
+
+function arc(cx: number, cy: number, radius: number, from: number, to: number, steps: number): Pt[] {
+  const points: Pt[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const theta = from + ((to - from) * i) / steps;
+    points.push({ x: cx + Math.cos(theta) * radius, y: cy + Math.sin(theta) * radius });
+  }
+  return points;
+}
+
+type Pt = { x: number; y: number };
 
 function rounded(
   origin: { x: number; y: number },

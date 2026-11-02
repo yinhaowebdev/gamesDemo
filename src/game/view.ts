@@ -1,5 +1,13 @@
-import { paintCharacter } from "../art/characters.ts";
 import { type Board, type CascadeStep, COLS, type Gem, type Pos, ROWS } from "./board.ts";
+
+const FLOWERS = [
+  new URL("../assets/flowers/flower-red.jpg", import.meta.url).href,
+  new URL("../assets/flowers/flower-yellow.jpg", import.meta.url).href,
+  new URL("../assets/flowers/flower-cyan.jpg", import.meta.url).href,
+  new URL("../assets/flowers/flower-green.jpg", import.meta.url).href,
+  new URL("../assets/flowers/flower-purple.jpg", import.meta.url).href,
+  new URL("../assets/flowers/flower-orange.jpg", import.meta.url).href,
+];
 
 const SWAP_MS = 160;
 const POP_MS = 180;
@@ -74,12 +82,10 @@ export function createView(root: HTMLElement): View {
     shape.className = `shape ${style.shape}`;
     shape.style.backgroundColor = style.color;
     shape.style.setProperty("--gem", style.color);
-    const portrait = document.createElement("canvas");
-    portrait.width = 96;
-    portrait.height = 96;
-    const portraitCtx = portrait.getContext("2d");
-    if (portraitCtx) paintCharacter(portraitCtx, gem.kind, style.color, 96);
-    shape.append(portrait);
+    const photo = document.createElement("img");
+    photo.src = FLOWERS[gem.kind] ?? FLOWERS[0] ?? "";
+    photo.alt = "";
+    shape.append(photo);
     inner.append(shape);
     el.append(inner);
     pieces.append(el);

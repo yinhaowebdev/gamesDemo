@@ -58,16 +58,30 @@
       </div>
     </div>
     <div id="zuma" hidden>
-      <canvas id="zuma-view"></canvas>
       <div class="link-hud">
         <button id="zuma-back" class="back" type="button">返回</button>
         <span id="zuma-level">第 1 关</span>
         <span id="zuma-left">剩余 0</span>
-        <button id="zuma-map-spiral" class="back" type="button">螺旋</button>
-        <button id="zuma-map-snake" class="back" type="button">蛇形</button>
-        <button id="zuma-map-loop" class="back" type="button">回环</button>
       </div>
+      <canvas id="zuma-view"></canvas>
       <p id="zuma-hint">瞄准轨道上的球，三个同色就能消。</p>
+      <div id="zuma-maps" hidden>
+        <div class="card">
+          <h2>选一条轨道</h2>
+          <div class="map-picks">
+            <button id="zuma-map-spiral" class="back" type="button">螺旋</button>
+            <button id="zuma-map-snake" class="back" type="button">蛇形</button>
+            <button id="zuma-map-loop" class="back" type="button">回环</button>
+            <button id="zuma-map-castle" class="back" type="button">城堡</button>
+            <button id="zuma-map-subway" class="back" type="button">地铁</button>
+            <button id="zuma-map-river" class="back" type="button">河流</button>
+            <button id="zuma-map-maze" class="back" type="button">迷宫</button>
+            <button id="zuma-map-mountain" class="back" type="button">山路</button>
+            <button id="zuma-map-garden" class="back" type="button">花园</button>
+            <button id="zuma-map-interchange" class="back" type="button">立交</button>
+          </div>
+        </div>
+      </div>
       <div id="zuma-overlay" hidden>
         <div class="card">
           <h2 id="zuma-overlay-title"></h2>
@@ -77,15 +91,19 @@
       </div>
     </div>
     <div id="link" hidden>
-      <canvas id="link-view"></canvas>
       <div class="link-hud">
         <button id="link-back" class="back" type="button">返回</button>
         <span id="link-level">第 1 关</span>
         <span id="link-pairs">暂存 0/7</span>
         <span id="link-time">0:00</span>
       </div>
-      <div id="link-tray"></div>
-      <p id="link-hint">点露出来的方块，三个相同才能消。</p>
+      <canvas id="link-view"></canvas>
+      <div id="link-dock">
+        <button id="link-held" class="tray-slot" type="button" aria-label="待放入" disabled></button>
+        <button id="link-confirm" class="back" type="button" disabled>放入</button>
+        <div id="link-tray"></div>
+      </div>
+      <p id="link-hint">点一个方块，确认后放进暂存。三个相同才能消。</p>
       <div id="link-overlay" hidden>
         <div class="card">
           <h2 id="link-overlay-title"></h2>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  CUBE,
+  KIND_COUNT,
   LEVELS,
   TRAY_LIMIT,
   createLevel,
@@ -8,8 +8,8 @@ import {
   maskCells,
   mulberry32,
   placeInTray,
+  propSpan,
   scatterPoses,
-  tableHalf,
 } from "./rules.ts";
 
 describe("cube pile", () => {
@@ -43,35 +43,40 @@ describe("cube pile", () => {
       expect(tiles).toHaveLength(count);
       const kinds = new Map<number, number>();
       for (const entry of tiles) kinds.set(entry.tile.kind, (kinds.get(entry.tile.kind) ?? 0) + 1);
-      for (const amount of kinds.values()) expect(amount).toBe(3);
+      expect(kinds.size).toBe(KIND_COUNT);
+      for (const amount of kinds.values()) {
+        expect(amount % 3).toBe(0);
+        expect(amount).toBeGreaterThanOrEqual(15);
+      }
     }
   });
 
-  it("scatters cubes onto the table at different angles", () => {
+  it("stacks every tile tightly on a small footprint", () => {
     for (const level of LEVELS) {
       const dealt = createLevel(level, mulberry32(4));
+      const tiles = listTiles(dealt);
       const poses = scatterPoses(dealt, mulberry32(8));
-      expect(poses).toHaveLength(listTiles(dealt).length);
-      const yaws = new Set(poses.map((pose) => pose.yaw));
-      expect(yaws.size).toBeGreaterThan(1);
-      const pitches = poses.map((pose) => pose.pitch);
-      expect(Math.max(...pitches) - Math.min(...pitches)).toBeGreaterThan(0.2);
-      const heights = [...new Set(poses.map((pose) => pose.y))].sort((a, b) => a - b);
-      for (let i = 1; i < heights.length; i++) {
-        const lower = heights[i - 1] ?? 0;
-        const upper = heights[i] ?? 0;
-        expect(upper - lower).toBeGreaterThan(CUBE);
+      expect(poses).toHaveLength(tiles.length);
+      const kindOf = new Map(tiles.map((entry) => [entry.tile.id, entry.tile.kind]));
+      const columns = new Map<string, typeof poses>();
+      for (const pose of poses) {
+        expect(Math.abs(pose.x)).toBeLessThan(3);
+        expect(Math.abs(pose.z)).toBeLessThan(2.2);
+        expect(pose.pitch).toBe(0);
+        expect(pose.roll).toBe(0);
+        const key = `${pose.x},${pose.z}`;
+        const column = columns.get(key) ?? [];
+        column.push(pose);
+        columns.set(key, column);
       }
-      const { halfW, halfD } = tableHalf(dealt.width, dealt.depth);
-      for (let i = 0; i < poses.length; i++) {
-        const pose = poses[i];
-        if (!pose) continue;
-        expect(Math.abs(pose.x)).toBeLessThanOrEqual(halfW - CUBE / 2);
-        expect(Math.abs(pose.z)).toBeLessThanOrEqual(halfD - CUBE / 2);
-        for (let j = i + 1; j < poses.length; j++) {
-          const other = poses[j];
-          if (!other || pose.y !== other.y) continue;
-          expect(Math.hypot(pose.x - other.x, pose.z - other.z)).toBeGreaterThan(CUBE);
+      expect(columns.size).toBe(20);
+      for (const column of columns.values()) {
+        expect(column.length).toBeGreaterThan(8);
+        let top = 0;
+        for (const pose of column.slice().sort((a, b) => a.y - b.y)) {
+          const span = propSpan(kindOf.get(pose.id) ?? 0);
+          expect(pose.y + span.minY).toBeCloseTo(top, 5);
+          top = pose.y + span.maxY;
         }
       }
     }

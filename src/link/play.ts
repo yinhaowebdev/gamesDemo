@@ -1,5 +1,4 @@
 import { play } from "../audio/bus.ts";
-import { paintFace } from "./face.ts";
 import { createLinkScene, type LinkScene } from "./scene.ts";
 import {
   LEVELS,
@@ -14,7 +13,7 @@ import {
   scatterPoses,
 } from "./rules.ts";
 
-const HINT = "点露出来的方块，三个相同才能消。";
+const HINT = "点一个方块，确认后放进暂存。三个相同才能消。";
 
 let back: () => void = () => {};
 let scene: LinkScene | null = null;
@@ -23,6 +22,7 @@ let wired = false;
 let levelIndex = 0;
 let board: Board | null = null;
 let tray: TrayTile[] = [];
+let held: TrayTile | null = null;
 let busy = false;
 let ended = false;
 let remaining = 0;
@@ -50,6 +50,22 @@ function renderHud(count = tray.length): void {
   must<HTMLElement>("#link-time").textContent = formatTime(remaining);
 }
 
+function renderHeld(): void {
+  const slot = must<HTMLButtonElement>("#link-held");
+  const confirm = must<HTMLButtonElement>("#link-confirm");
+  const locked = held === null || busy || ended;
+  slot.replaceChildren();
+  slot.classList.toggle("is-held", held !== null);
+  slot.disabled = locked;
+  confirm.disabled = locked;
+  if (!held || !scene) return;
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  scene.paintToy(canvas, held.kind);
+  slot.appendChild(canvas);
+}
+
 function renderTray(slots: readonly TrayTile[]): void {
   const root = must<HTMLElement>("#link-tray");
   root.replaceChildren();
@@ -57,11 +73,11 @@ function renderTray(slots: readonly TrayTile[]): void {
     const slot = document.createElement("div");
     slot.className = "tray-slot";
     const tile = slots[i];
-    if (tile) {
+    if (tile && scene) {
       const canvas = document.createElement("canvas");
       canvas.width = 128;
       canvas.height = 128;
-      paintFace(canvas, tile.kind);
+      scene.paintToy(canvas, tile.kind);
       slot.appendChild(canvas);
     }
     root.appendChild(slot);
@@ -75,6 +91,7 @@ function showOverlay(title: string, text: string, action: string): void {
   must<HTMLElement>("#link-overlay-text").textContent = text;
   must<HTMLButtonElement>("#link-overlay-action").textContent = action;
   must<HTMLElement>("#link-overlay").hidden = false;
+  renderHeld();
 }
 
 function begin(index: number): void {
@@ -85,6 +102,7 @@ function begin(index: number): void {
   levelIndex = index;
   board = createLevel(level, rng);
   tray = [];
+  held = null;
   busy = true;
   ended = false;
   remaining = level.seconds;
@@ -92,10 +110,15 @@ function begin(index: number): void {
   must<HTMLElement>("#link-overlay").hidden = true;
   must<HTMLElement>("#link-hint").textContent = HINT;
   scene.setBoard(board, scatterPoses(board, rng));
+  scene.setHeld(null);
   renderTray(tray);
+  renderHeld();
   renderHud();
   void scene.settle().finally(() => {
-    if (token === epoch) busy = false;
+    if (token === epoch) {
+      busy = false;
+      renderHeld();
+    }
   });
 }
 
@@ -115,13 +138,34 @@ function onFrame(dt: number): void {
   }
 }
 
+function clearHeld(): void {
+  held = null;
+  scene?.setHeld(null);
+  renderHeld();
+}
+
 function onPick(id: number): void {
   if (!board || !scene || busy || ended) return;
-  const tile = removeTile(board, id);
+  if (held?.id === id) {
+    clearHeld();
+    return;
+  }
+  const found = listTiles(board).find((entry) => entry.tile.id === id);
+  if (!found) return;
+  held = { id: found.tile.id, kind: found.tile.kind };
+  scene.setHeld(id);
+  renderHeld();
+}
+
+function confirmHeld(): void {
+  if (!board || !scene || busy || ended || !held) return;
+  const tile = removeTile(board, held.id);
   if (!tile) return;
+  clearHeld();
   const token = epoch;
   const current = scene;
   busy = true;
+  renderHeld();
   const placed = placeInTray(tray, tile);
   const pending = tray.slice();
   let insertAt = pending.length;
@@ -164,7 +208,10 @@ async function finishPick(
     }
     if (full) showOverlay("暂存区满了", "没有凑成三个", "重试");
   } finally {
-    if (token === epoch) busy = false;
+    if (token === epoch) {
+      busy = false;
+      renderHeld();
+    }
   }
 }
 
@@ -178,6 +225,11 @@ function wire(): void {
   if (wired) return;
   wired = true;
   must<HTMLButtonElement>("#link-back").addEventListener("click", () => back());
+  must<HTMLButtonElement>("#link-held").addEventListener("click", () => {
+    if (busy || ended) return;
+    clearHeld();
+  });
+  must<HTMLButtonElement>("#link-confirm").addEventListener("click", () => confirmHeld());
   must<HTMLButtonElement>("#link-overlay-action").addEventListener("click", () => {
     const action = must<HTMLButtonElement>("#link-overlay-action").textContent;
     if (action === "下一关") begin(levelIndex + 1);
