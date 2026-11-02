@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   apk:
     runs-on: ubuntu-latest
@@ -84,3 +87,19 @@ jobs:
           name: xxl-android-debug
           path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
           if-no-files-found: error
+
+      - name: Publish raw APK
+        run: |
+          apk_src=$(find src-tauri/gen/android/app/build/outputs/apk -name '*.apk' -print -quit)
+          test -n "$apk_src"
+          cp "$apk_src" /tmp/xxl-debug.apk
+          if git fetch origin apk:refs/remotes/origin/apk; then
+            git checkout -B apk origin/apk
+          else
+            git checkout -B apk
+          fi
+          mkdir -p dist-apk
+          cp /tmp/xxl-debug.apk dist-apk/xxl-debug.apk
+          git add dist-apk/xxl-debug.apk
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Publish debug APK"
+          git push origin apk
