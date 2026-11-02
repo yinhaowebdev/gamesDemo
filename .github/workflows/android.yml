@@ -89,22 +89,41 @@ jobs:
           if-no-files-found: error
 
       - name: Publish raw APK
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
         run: |
+          set +e
+          log=/tmp/publish.log
+          : > "$log"
+          run() {
+            echo "+ $*" >> "$log"
+            "$@" >> "$log" 2>&1
+            status=$?
+            echo "exit $status" >> "$log"
+            return "$status"
+          }
           apk_src=$(find src-tauri/gen/android/app/build/outputs/apk -name '*.apk' -print -quit)
-          test -n "$apk_src"
-          origin=$(git remote get-url origin)
-          header=$(git config --local --get http.https://github.com/.extraheader)
-          test -n "$header"
+          cp "$apk_src" /tmp/xxl-debug.apk
+          git worktree prune >> "$log" 2>&1
           rm -rf /tmp/apk-pub
-          mkdir -p /tmp/apk-pub
-          cp "$apk_src" /tmp/apk-pub/xxl-debug.apk
-          git -C /tmp/apk-pub init -b apk
-          git -C /tmp/apk-pub remote add origin "$origin"
-          git -C /tmp/apk-pub config http.https://github.com/.extraheader "$header"
-          if git -C /tmp/apk-pub fetch origin apk; then
-            git -C /tmp/apk-pub checkout -B apk FETCH_HEAD
-            cp "$apk_src" /tmp/apk-pub/xxl-debug.apk
+          if run git fetch origin apk:refs/remotes/origin/apk; then
+            run git worktree add /tmp/apk-pub origin/apk
+          else
+            run git worktree add --detach /tmp/apk-pub
+            run bash -c 'cd /tmp/apk-pub && git checkout --orphan apk && git rm -rf .'
           fi
-          git -C /tmp/apk-pub add xxl-debug.apk
-          git -C /tmp/apk-pub -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Publish debug APK"
-          git -C /tmp/apk-pub push origin apk
+          cp /tmp/xxl-debug.apk /tmp/apk-pub/xxl-debug.apk
+          run bash -c 'cd /tmp/apk-pub && git add -f xxl-debug.apk && git commit -m "Publish debug APK" && git push origin HEAD:apk'
+          status=$?
+          {
+            echo '```'
+            tail -n 40 "$log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" -eq 0 ]; then
+            echo "https://raw.githubusercontent.com/yinhaowebdev/gamesDemo/apk/xxl-debug.apk" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
