@@ -1,0 +1,82 @@
+name: Android
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "platform-tools"
+
+      - name: Export NDK paths
+        run: |
+          echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Init Android project
+        run: npm run tauri android init -- --ci
+
+      - name: Lock portrait orientation
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          path = Path("src-tauri/gen/android/app/src/main/AndroidManifest.xml")
+          text = path.read_text()
+          match = re.search(r"<activity\s[^>]*>", text)
+          if not match:
+              raise SystemExit("activity tag not found")
+          tag = match.group(0)
+          if "android:screenOrientation=" in tag:
+              updated = re.sub(
+                  r'android:screenOrientation="[^"]*"',
+                  'android:screenOrientation="portrait"',
+                  tag,
+                  count=1,
+              )
+          else:
+              updated = tag.replace(
+                  "<activity",
+                  '<activity android:screenOrientation="portrait"',
+                  1,
+              )
+          path.write_text(text[: match.start()] + updated + text[match.end() :])
+          PY
+
+      - name: Build debug APK
+        run: npm run tauri android build -- --apk --debug --target aarch64 --ci
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xxl-android-debug
+          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error

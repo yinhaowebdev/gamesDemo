@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <title>小游戏</title>
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+
+  <body>
+    <div id="menu">
+      <button id="mute" class="mute" type="button">静音</button>
+      <h1>小游戏</h1>
+      <button id="pick-match3" class="pick" type="button">
+        <strong>消消乐</strong>
+        <span>交换相邻的宝石</span>
+      </button>
+      <button id="pick-link" class="pick" type="button">
+        <strong>连连看</strong>
+        <span>三个相同，堆在一起</span>
+      </button>
+      <button id="pick-zuma" class="pick" type="button">
+        <strong>祖玛</strong>
+        <span>沿轨道打同色球</span>
+      </button>
+    </div>
+    <div id="app" hidden>
+      <button id="match3-back" class="back" type="button">返回</button>
+      <header>
+        <div class="stat">
+          <span>关卡</span>
+          <strong id="level">1</strong>
+        </div>
+        <div class="stat">
+          <span>分数</span>
+          <strong id="score">0</strong>
+          <em id="target">/ 1000</em>
+          <small id="best">最高 0</small>
+        </div>
+        <div class="stat">
+          <span>步数</span>
+          <strong id="moves">20</strong>
+        </div>
+      </header>
+      <p id="hint">拖动交换相邻宝石，或点两下</p>
+      <div id="board"></div>
+      <p id="toast" hidden></p>
+      <div id="overlay" hidden>
+        <div class="card">
+          <h2 id="overlay-title"></h2>
+          <p id="overlay-text"></p>
+          <button id="overlay-action" type="button"></button>
+        </div>
+      </div>
+    </div>
+    <div id="zuma" hidden>
+      <canvas id="zuma-view"></canvas>
+      <div class="link-hud">
+        <button id="zuma-back" class="back" type="button">返回</button>
+        <span id="zuma-level">第 1 关</span>
+        <span id="zuma-left">剩余 0</span>
+        <button id="zuma-map-spiral" class="back" type="button">螺旋</button>
+        <button id="zuma-map-snake" class="back" type="button">蛇形</button>
+        <button id="zuma-map-loop" class="back" type="button">回环</button>
+      </div>
+      <p id="zuma-hint">瞄准轨道上的球，三个同色就能消。</p>
+      <div id="zuma-overlay" hidden>
+        <div class="card">
+          <h2 id="zuma-overlay-title"></h2>
+          <p id="zuma-overlay-text"></p>
+          <button id="zuma-overlay-action" type="button"></button>
+        </div>
+      </div>
+    </div>
+    <div id="link" hidden>
+      <canvas id="link-view"></canvas>
+      <div class="link-hud">
+        <button id="link-back" class="back" type="button">返回</button>
+        <span id="link-level">第 1 关</span>
+        <span id="link-pairs">暂存 0/7</span>
+        <span id="link-time">0:00</span>
+      </div>
+      <div id="link-tray"></div>
+      <p id="link-hint">点露出来的方块，三个相同才能消。</p>
+      <div id="link-overlay" hidden>
+        <div class="card">
+          <h2 id="link-overlay-title"></h2>
+          <p id="link-overlay-text"></p>
+          <button id="link-overlay-action" type="button"></button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
