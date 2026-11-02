@@ -21,6 +21,8 @@ jobs:
           targets: aarch64-linux-android
 
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
 
       - uses: actions/setup-java@v4
         with:
@@ -28,6 +30,8 @@ jobs:
           java-version: "17"
 
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - name: Install Android SDK packages
         run: |
